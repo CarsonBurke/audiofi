@@ -1,0 +1,52 @@
+@import 'tailwindcss';
+
+/* Manual dark mode: theme.ts toggles `.dark` on <html> (system/light/dark).
+   This overrides Tailwind's default prefers-color-scheme dark variant so the
+   in-app toggle is authoritative. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+  /* Neutral, high-contrast palette (Vercel-style): black/white + grays. */
+  body {
+    @apply bg-white text-neutral-900 dark:bg-black dark:text-neutral-100;
+  }
+}
+
+@layer components {
+  /* Article blocks. JS toggles `.active`; `.heading` marks heading blocks. */
+  .block {
+    @apply rounded-md border-l-2 border-transparent px-2 py-1 transition-colors;
+  }
+  .block.heading {
+    @apply mt-2 text-base font-semibold;
+  }
+  .block.active {
+    @apply border-neutral-900 bg-neutral-100 dark:border-neutral-100 dark:bg-neutral-900;
+  }
+
+  .icon-btn {
+    @apply inline-flex h-10 min-w-10 items-center justify-center rounded-lg border
+      border-neutral-200 bg-white text-neutral-700 transition
+      hover:border-neutral-400 hover:text-neutral-900
+      focus-visible:outline-2 focus-visible:outline-neutral-900
+      disabled:cursor-default disabled:opacity-40
+      dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300
+      dark:hover:border-neutral-600 dark:hover:text-neutral-100
+      dark:focus-visible:outline-neutral-100;
+  }
+  /* Primary (play): solid, inverted in dark — the one high-contrast surface. */
+  .icon-btn.play {
+    @apply min-w-14 border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-700 hover:text-white
+      dark:border-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200 dark:hover:text-neutral-900;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
