@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Quiet Power of Local AI</title>
+    <style>
+      body { font: 17px/1.7 Georgia, serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+      h1 { font-size: 32px; line-height: 1.2; }
+      .byline { color: #666; font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <article>
+      <h1>The Quiet Power of Local AI</h1>
+      <p class="byline">By Jane Doe · Example Times</p>
+      <p>Running machine-learning models directly on a user's device used to be impractical. The models were too large, the runtimes too slow, and the browser APIs too immature. Over the last two years that has changed dramatically, and the implications for privacy and cost are only beginning to be understood.</p>
+      <h2>Why it matters</h2>
+      <p>When inference happens locally, no data ever leaves the machine. There is no server to bill you by the token, no audio uploaded to a third party, and no account required. For tasks like text-to-speech, this is transformative: an entire article can be narrated without a single network request after the model is cached.</p>
+      <p>The trade-off is that the device must do the work. Modern laptops and phones are surprisingly capable, especially with hardware acceleration through WebGPU. When a GPU is unavailable, a WebAssembly fallback keeps things working, if more slowly.</p>
+      <p>Quality has improved too. Small neural voices now sound natural enough for long-form listening, closing much of the gap with cloud services that were unthinkable to run client-side just a short while ago.</p>
+      <h2>What comes next</h2>
+      <p>Expect more of the stack to move on-device: summarization, translation, and search are all plausible candidates. The browser is quietly becoming a capable inference platform, and the article you are reading right now can be turned into speech without anything leaving your computer.</p>
+    </article>
+  </body>
+</html>

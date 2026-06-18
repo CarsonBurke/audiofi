@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Article → Audiobook — Harness</title>
+    <style>
+      body { font: 14px/1.5 system-ui, sans-serif; margin: 0; padding: 20px; max-width: 900px; }
+      h1 { font-size: 18px; }
+      textarea { width: 100%; height: 160px; font-family: monospace; font-size: 12px; }
+      button { padding: 8px 14px; margin: 6px 6px 6px 0; cursor: pointer; }
+      .row { display: flex; gap: 20px; flex-wrap: wrap; }
+      .panel { flex: 1; min-width: 320px; }
+      pre { background: #f5f5f5; padding: 10px; border-radius: 6px; overflow: auto; max-height: 320px; }
+      .block { padding: 2px 6px; border-left: 3px solid #ddd; }
+      .block.heading { font-weight: 700; }
+      #status { font-weight: 600; }
+      code { background: #eee; padding: 1px 4px; border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <h1>Article → Audiobook — Pipeline Harness</h1>
+    <p>Status: <span id="status">ready</span></p>
+
+    <label for="html"><strong>Sample article HTML</strong></label>
+    <textarea id="html"></textarea>
+
+    <div>
+      <button id="extract">1. Extract + Normalize + Chunk</button>
+      <button id="synth" disabled>2. Synthesize first 2 chunks &amp; play</button>
+    </div>
+
+    <div class="row">
+      <div class="panel">
+        <h3>Article</h3>
+        <div id="meta"></div>
+        <div id="blocks"></div>
+      </div>
+      <div class="panel">
+        <h3>Chunks (<span id="chunk-count">0</span>)</h3>
+        <pre id="chunks"></pre>
+        <h3>TTS</h3>
+        <pre id="tts">—</pre>
+      </div>
+    </div>
+
+    <script type="module" src="./harness.ts"></script>
+  </body>
+</html>

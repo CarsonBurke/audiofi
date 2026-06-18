@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Quiet Power of Local AI</title>
+    <style>
+      body { font: 17px/1.7 Georgia, serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+      h1 { font-size: 30px; line-height: 1.2; }
+      .byline { color: #666; font-style: italic; }
+    </style>
+    <script>
+      // chrome.* shim that also *simulates* the SW + offscreen: a SYNTH_START
+      // triggers MODEL_STATUS(ready) + a few synthetic SYNTH_CHUNKs + SYNTH_DONE
+      // delivered back to the content-script listeners, so the widget's full
+      // state machine and audio enqueue can be exercised without a real model.
+      const _listeners = [];
+      const _store = { local: {}, session: {} };
+      const area = (n) => ({
+        get: (keys) => {
+          const out = {}; const list = Array.isArray(keys) ? keys : [keys];
+          for (const k of list) if (k in _store[n]) out[k] = _store[n][k];
+          return Promise.resolve(out);
+        },
+        set: (o) => { Object.assign(_store[n], o); return Promise.resolve(); },
+      });
+      const dispatch = (msg) => _listeners.forEach((fn) => fn(msg, {}, () => {}));
+      window.__events = [];
+      function makePcm() {
+        // Mirror the real wire format: base64 of raw float32 bytes (see
+        // src/shared/pcm.ts), which the widget decodes via decodePcm().
+        const a = new Float32Array(4800); // 0.2s @ 24kHz
+        for (let i = 0; i < a.length; i++) a[i] = Math.sin(i * 0.05) * 0.05;
+        const bytes = new Uint8Array(a.buffer);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin);
+      }
+      window.chrome = {
+        storage: { local: area('local'), session: area('session') },
+        tabs: { sendMessage: () => Promise.resolve(), query: () => Promise.resolve([]) },
+        runtime: {
+          onMessage: { addListener: (fn) => _listeners.push(fn), removeListener: () => {} },
+          sendMessage: (msg) => {
+            window.__events.push(msg.type);
+            if (msg.to === 'sw' && msg.type === 'SYNTH_START') {
+              setTimeout(() => dispatch({ to: 'content', type: 'MODEL_STATUS', state: 'ready', backend: 'wasm' }), 40);
+              [0, 1, 2].forEach((i) =>
+                setTimeout(() => dispatch({
+                  to: 'content', type: 'SYNTH_CHUNK', epoch: msg.epoch, index: i,
+                  blockIndex: i, kind: 'paragraph', pcm: makePcm(), sampleRate: 24000,
+                  durationMs: 200, text: 'chunk ' + i,
+                }), 120 + i * 150));
+              setTimeout(() => dispatch({ to: 'content', type: 'SYNTH_DONE', epoch: msg.epoch, lastIndex: 2 }), 760);
+            }
+            return Promise.resolve();
+          },
+        },
+      };
+    </script>
+  </head>
+  <body>
+    <article>
+      <h1>The Quiet Power of Local AI</h1>
+      <p class="byline">By Jane Doe · Example Times</p>
+      <p>Running machine-learning models directly on a user's device used to be impractical. The models were too large, the runtimes too slow, and the browser APIs too immature. Over the last two years that has changed dramatically.</p>
+      <h2>Why it matters</h2>
+      <p>When inference happens locally, no data ever leaves the machine. There is no server to bill you by the token, no audio uploaded to a third party, and no account required.</p>
+      <p>The trade-off is that the device must do the work. Modern laptops and phones are surprisingly capable, especially with hardware acceleration through WebGPU.</p>
+      <p>Quality has improved too. Small neural voices now sound natural enough for long-form listening, closing much of the gap with cloud services.</p>
+    </article>
+
+    <script type="module">
+      import { mountWidget } from '../src/content/widget.ts';
+      mountWidget();
+    </script>
+  </body>
+</html>
