@@ -1,0 +1,36 @@
+{
+  "name": "article-to-audiobook",
+  "version": "0.1.0",
+  "description": "Turn any article into a spoken audiobook, fully on-device.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sync-ort": "node scripts/sync-ort.mjs",
+    "predev": "node scripts/sync-ort.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/sync-ort.mjs",
+    "build": "tsc --noEmit && vite build",
+    "build:harness": "vite build --config vite.harness.config.ts",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"src/**/*.{ts,html}\""
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1",
+    "@mozilla/readability": "^0.5.0",
+    "kokoro-js": "^1.2.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.28",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/chrome": "^0.0.299",
+    "happy-dom": "^15.11.7",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}
