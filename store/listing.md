@@ -54,8 +54,9 @@ is data, not executable code, and the browser caches it after the first run.
 
 ## Privacy policy URL
 
-Host `privacy-policy.md` at a public URL and put it in the listing's Privacy policy
-field.
+https://carsonburke.github.io/audiofi/ — paste into the listing's Privacy policy
+field. Served by GitHub Pages from `docs/` on `main`; edit `docs/index.html` to update
+it.
 
 ## Listing assets checklist
 
@@ -64,5 +65,5 @@ field.
 - [ ] Optional 440×280 small promo tile.
 - [ ] Category and primary language.
 - [ ] Detailed description.
-- [ ] Privacy policy URL (above).
+- [x] Privacy policy URL (https://carsonburke.github.io/audiofi/).
 - [ ] One-time developer registration fee paid.
