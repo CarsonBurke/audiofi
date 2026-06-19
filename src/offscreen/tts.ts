@@ -10,6 +10,17 @@ import type { Backend } from '../shared/types';
 // onnx-community fp16/fp32/q8 ONNX export that kokoro-js targets by default.
 const MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
+// Lower ONNX Runtime's environment log verbosity. This gates env-level info/
+// verbose chatter, but note it does NOT silence the session-scoped WARNING
+// diagnostics (e.g. "VerifyEachNodeIsAssignedToAnEp"): those are gated by the
+// session's own severity, which kokoro-js gives us no way to set. Those — and
+// transformers' content-length warning — are filtered at the console instead
+// (see quietLibraryNoise in offscreen.ts), since Chrome maps a wasm-origin log
+// to "offscreen.html:0 (anonymous function)" and lists it as an extension error.
+if (env.backends?.onnx) {
+  env.backends.onnx.logLevel = 'error';
+}
+
 // Run ORT-WASM inline (no proxy worker) so the strict MV3 worker-src 'self' CSP
 // can't block a cross-origin/blob worker. WebGPU path is unaffected.
 if (env.backends?.onnx?.wasm) {

@@ -10,6 +10,34 @@ import { chunkBlocks } from '../content/chunk';
 import { encodePcm } from '../shared/pcm';
 import { TtsEngine } from './tts';
 
+// ONNX Runtime and transformers.js emit a few benign diagnostics straight to the
+// console — ORT's session-init note that some shape ops stay on CPU, and a
+// content-length fallback warning during model download. They come from inside
+// the wasm module / library internals (which expose no knob to silence them),
+// and because Chrome can't map a wasm frame to a JS source line it lists them on
+// the extension's Errors page as "offscreen.html:0 (anonymous function)" — alarming
+// despite synthesis working fine. Drop exactly these known-noise lines (matched
+// conservatively) so genuine errors and warnings still surface untouched.
+const LIBRARY_NOISE = [
+  /VerifyEachNodeIsAssignedToAnEp/,
+  /Some nodes were not assigned to the preferred execution providers/,
+  /Rerunning with verbose output on a non-minimal build/,
+  /Unable to determine content-length from response headers/,
+];
+
+function quietLibraryNoise(): void {
+  for (const method of ['error', 'warn'] as const) {
+    const original = console[method].bind(console);
+    console[method] = (...args: unknown[]): void => {
+      const text = args.map((a) => (typeof a === 'string' ? a : '')).join(' ');
+      if (LIBRARY_NOISE.some((re) => re.test(text))) return;
+      original(...args);
+    };
+  }
+}
+
+quietLibraryNoise();
+
 const engine = new TtsEngine();
 
 // State for the current playback session, retained so SEEK can restart synthesis
