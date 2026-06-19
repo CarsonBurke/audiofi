@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audiofi Privacy Policy</title>
+<meta name="description" content="Privacy policy for the Audiofi browser extension.">
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px; margin: 0 auto; padding: 56px 24px 96px; color: #1a1a1a;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 .15em; }
+  h2 { font-size: 1.2rem; margin: 2.2em 0 .6em; }
+  .updated { color: #6b6b6b; font-size: .92rem; margin-bottom: 2.4em; }
+  p { margin: 0 0 1.1em; }
+  ul { margin: 0 0 1.1em; padding-left: 1.3em; }
+  li { margin: 0 0 .4em; }
+  a { color: #2563eb; }
+  code { font-size: .9em; background: rgba(127,127,127,.15); padding: .1em .35em; border-radius: 4px; }
+  hr { border: none; border-top: 1px solid rgba(127,127,127,.25); margin: 3em 0 1.5em; }
+  footer { color: #6b6b6b; font-size: .9rem; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e6e6e6; background: #111; }
+    .updated, footer { color: #9a9a9a; }
+    a { color: #6ea8fe; }
+  }
+</style>
+</head>
+<body>
+<h1>Audiofi Privacy Policy</h1>
+<p class="updated">Last updated: June 19, 2026</p>
+
+<p>Audiofi reads the article you're looking at out loud, on your own device. There is
+no Audiofi server. We have no accounts, no analytics, and no trackers, and we never
+receive your data.</p>
+
+<h2>What Audiofi handles</h2>
+
+<p><strong>Page content.</strong> When you ask Audiofi to read a page, it takes that
+page's text (or, for a PDF, its contents) and turns it into audio in your browser. The
+text is kept only for the current browsing session and is dropped when you close the
+browser. It is not sent to us or to anyone else.</p>
+
+<p><strong>Your settings.</strong> Voice, speed, volume, and light/dark choice are
+saved on your device with the browser's local storage so they stick between sessions.
+They stay on your device.</p>
+
+<p><strong>The voice model.</strong> The first time you play something, Audiofi
+downloads the Kokoro voice model from Hugging Face, and the browser keeps it cached.
+From then on, speech is produced offline. Apart from reading the page you point it at,
+this is the only network request Audiofi makes.</p>
+
+<h2>What Audiofi does not do</h2>
+<ul>
+  <li>No sign-in and no personal information.</li>
+  <li>No analytics, telemetry, advertising, or tracking.</li>
+  <li>No data sold or shared — nothing leaves your device to sell or share.</li>
+  <li>No work in the background. Audiofi touches a page only when you tell it to read one.</li>
+</ul>
+
+<h2>Permissions</h2>
+<p>Audiofi asks for the access it needs to read a page on demand and play it back. No
+permission is used to collect or transmit your data:</p>
+<ul>
+  <li><strong>Read and change data on the sites you visit</strong> — to extract the
+  text of a page you ask it to read, and to detect and load PDFs served without a
+  <code>.pdf</code> address. Used only when you start reading a page.</li>
+  <li><strong>Side panel</strong> — to show the reading view and playback controls.</li>
+  <li><strong>Storage</strong> — to remember your voice, speed, volume, and theme, and
+  to hold the current session's text. Cleared when the browser closes.</li>
+  <li><strong>Offscreen document</strong> — to run speech synthesis, which needs audio
+  playback the background script can't provide.</li>
+</ul>
+
+<h2>Contact</h2>
+<p>Questions about this policy: <a href="mailto:carsonburke22@gmail.com">carsonburke22@gmail.com</a></p>
+
+<h2>Changes</h2>
+<p>If the extension's data handling changes, this page changes with it and the date at
+the top is updated.</p>
+
+<hr>
+<footer>Audiofi — turn any article into a spoken audiobook, fully on-device.</footer>
+</body>
+</html>
