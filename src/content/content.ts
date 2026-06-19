@@ -27,21 +27,43 @@ function looksLikeArticlePage(): boolean {
 onMessage('content', async (msg) => {
   if (msg.type !== 'EXTRACT_REQUEST') return;
 
+  // An EXTRACT_REQUEST is broadcast to every frame in the tab (the script runs
+  // with all_frames). Only the top frame reports a *failure* verdict; subframes
+  // stay silent unless they actually hold an article, so the SW receives exactly
+  // one authoritative "not an article" signal plus a candidate from whichever
+  // frame the real article lives in (often a cross-origin reader/proxy iframe).
+  // The SW keeps the richest candidate — see route()'s EXTRACT_* cases.
+  const isTop = window.top === window;
+  const fail = (reason: 'not-article' | 'empty' | 'error', message?: string): void => {
+    if (isTop) post({ to: 'sw', type: 'EXTRACT_FAILED', reason, message });
+  };
+
+  // Chrome renders PDFs in its built-in viewer with no readable DOM, but the top
+  // document's `contentType` still identifies them — and it's the only MIME
+  // signal available (the tabs API exposes none, so a URL not ending in `.pdf`
+  // is otherwise indistinguishable from an article). Hand the URL to the panel,
+  // which fetches and parses the bytes with pdf.js. Done before Readability so a
+  // PDF served from any URL (e.g. arxiv.org/pdf/<id>) is caught.
+  if (isTop && document.contentType === 'application/pdf') {
+    post({ to: 'sw', type: 'EXTRACT_PDF', url: location.href });
+    return;
+  }
+
   try {
     const { extractArticle, isLikelyArticle } = await import('./extract');
 
     if (!isLikelyArticle()) {
-      post({ to: 'sw', type: 'EXTRACT_FAILED', reason: 'not-article' });
+      fail('not-article');
       return;
     }
 
     const article = extractArticle();
     if (!article) {
-      post({ to: 'sw', type: 'EXTRACT_FAILED', reason: 'not-article' });
+      fail('not-article');
       return;
     }
     if (article.blocks.length === 0) {
-      post({ to: 'sw', type: 'EXTRACT_FAILED', reason: 'empty' });
+      fail('empty');
       return;
     }
 
@@ -49,11 +71,6 @@ onMessage('content', async (msg) => {
     // before forwarding to the panel (SPEC §3.2, §9: content → sw → panel).
     post({ to: 'sw', type: 'EXTRACT_RESULT', article });
   } catch (err) {
-    post({
-      to: 'sw',
-      type: 'EXTRACT_FAILED',
-      reason: 'error',
-      message: err instanceof Error ? err.message : String(err),
-    });
+    fail('error', err instanceof Error ? err.message : String(err));
   }
 });

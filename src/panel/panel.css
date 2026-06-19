@@ -8,6 +8,31 @@
 @layer base {
   html {
     color-scheme: light dark;
+    /* Shared tokens for the reusable UI controls (ui/select, ui/slider). The
+       widget defines the same set in its shadow root; here they track the
+       panel's manual dark mode (.dark on <html>) rather than the OS preference. */
+    --a2a-surface: #fff;
+    --a2a-text: #171717;
+    --a2a-muted: #737373;
+    --a2a-border: #e5e5e5;
+    --a2a-border-hover: #a3a3a3;
+    --a2a-hover: #f5f5f5;
+    --a2a-solid: #171717;
+    --a2a-track: #e5e5e5;
+    --a2a-tick: #d4d4d4;
+    --a2a-shadow: rgba(0, 0, 0, 0.14);
+  }
+  html.dark {
+    --a2a-surface: #0a0a0a;
+    --a2a-text: #fafafa;
+    --a2a-muted: #a3a3a3;
+    --a2a-border: #262626;
+    --a2a-border-hover: #525252;
+    --a2a-hover: #1a1a1a;
+    --a2a-solid: #fafafa;
+    --a2a-track: #262626;
+    --a2a-tick: #404040;
+    --a2a-shadow: rgba(0, 0, 0, 0.6);
   }
   /* Neutral, high-contrast palette (Vercel-style): black/white + grays. */
   body {
@@ -16,15 +41,68 @@
 }
 
 @layer components {
-  /* Article blocks. JS toggles `.active`; `.heading` marks heading blocks. */
-  .block {
-    @apply rounded-md border-l-2 border-transparent px-2 py-1 transition-colors;
+  /* Article body as a reading timeline: one continuous thread runs down the
+     left and a node marks each block; the active block's node fills in. JS
+     toggles `.active`; `.heading` marks heading blocks. */
+  #body {
+    position: relative;
+    padding-left: 22px;
   }
+  /* The connecting thread, behind the nodes. */
+  #body::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    border-radius: 1px;
+    background: #e5e5e5;
+  }
+  .dark #body::before {
+    background: #262626;
+  }
+
+  .block {
+    @apply relative rounded-md px-2 py-1 transition-colors;
+  }
+  /* The node: a hollow dot on the thread, aligned to the block's first line. */
+  .block::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 11px;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #fff;
+    border: 2px solid #d4d4d4;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.15s ease;
+  }
+  .dark .block::before {
+    background: #000;
+    border-color: #404040;
+  }
+
   .block.heading {
     @apply mt-2 text-base font-semibold;
   }
+
+  /* Active: subtle row tint + the node fills in (white in dark). */
   .block.active {
-    @apply border-neutral-900 bg-neutral-100 dark:border-neutral-100 dark:bg-neutral-900;
+    @apply bg-neutral-100 dark:bg-neutral-900;
+  }
+  .block.active::before {
+    background: #171717;
+    border-color: #171717;
+    transform: scale(1.2);
+  }
+  .dark .block.active::before {
+    background: #fff;
+    border-color: #fff;
   }
 
   .icon-btn {
@@ -42,11 +120,40 @@
     @apply min-w-14 border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-700 hover:text-white
       dark:border-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200 dark:hover:text-neutral-900;
   }
+
+  /* Refresh: a small dot badges the button when the active tab has drifted away
+     from what the panel is showing (playback is in progress, so we don't auto-
+     follow); clicking it loads the current page. The icon spins while extracting. */
+  #refresh.has-update::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #2563eb;
+    border: 2px solid #fff;
+  }
+  .dark #refresh.has-update::after {
+    border-color: #000;
+  }
+  #refresh.busy svg {
+    animation: a2a-spin 0.7s linear infinite;
+  }
+  @keyframes a2a-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+  #refresh.busy svg {
+    animation: none !important;
   }
 }

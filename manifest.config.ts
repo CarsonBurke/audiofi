@@ -35,11 +35,19 @@ export default defineManifest({
   // Declared (not programmatically injected) so message delivery is reliable
   // under @crxjs. The script is inert until asked and lazy-imports Readability,
   // so the always-on footprint is a single idle listener (SPEC §3.1, §8 notes).
+  //
+  // `all_frames` so extraction can find an article that lives in a child frame:
+  // paywall-bypass aggregators and reader proxies (removepaywalls, 12ft, archive
+  // embeds, AMP viewers) render the real article inside a cross-origin iframe the
+  // top document can't read. An EXTRACT_REQUEST is broadcast to every frame and
+  // the service worker keeps the richest candidate (see src/background/sw.ts).
+  // The widget still only mounts in the top frame (window.top === window).
   content_scripts: [
     {
       matches: ['<all_urls>'],
       js: ['src/content/content.ts'],
       run_at: 'document_idle',
+      all_frames: true,
     },
   ],
   permissions: ['offscreen', 'sidePanel', 'activeTab', 'scripting', 'storage'],
@@ -64,7 +72,7 @@ export default defineManifest({
   // service worker can create the offscreen page and ORT can load WASM chunks.
   web_accessible_resources: [
     {
-      resources: ['src/offscreen/offscreen.html', 'assets/*', 'ort/*'],
+      resources: ['src/offscreen/offscreen.html', 'assets/*', 'ort/*', 'pdf/*'],
       matches: ['<all_urls>'],
     },
   ],

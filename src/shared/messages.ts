@@ -15,7 +15,7 @@
 // hop (it arrives as a plain, lengthless object) — so producers encode and
 // consumers decode. Chunking (§6) keeps each encoded buffer small.
 
-import type { Block, BlockKind, Backend, SessionPhase } from './types';
+import type { Block, BlockKind, Backend, SessionPhase, SessionMode } from './types';
 
 export type Channel = 'content' | 'sw' | 'offscreen' | 'panel';
 
@@ -34,14 +34,33 @@ export interface ExtractRequest extends Routed {
 
 export interface ExtractResult extends Routed {
   type: 'EXTRACT_RESULT';
+  /** The tab this result was extracted from, so the panel can attribute a late
+   *  reply to the right tab after a rapid switch (and ignore a stale one). The
+   *  SW stamps it when relaying to the panel; the content→SW hop omits it (the
+   *  content script doesn't know its own tab id). */
+  tabId?: number;
   article: import('./types').ExtractedArticle;
 }
 
 export interface ExtractFailed extends Routed {
   type: 'EXTRACT_FAILED';
+  /** The tab this verdict is for (see {@link ExtractResult.tabId}). */
+  tabId?: number;
   /** `not-article` when Readability declines; `error` on an unexpected throw. */
   reason: 'not-article' | 'empty' | 'error';
   message?: string;
+}
+
+export interface ExtractPdf extends Routed {
+  type: 'EXTRACT_PDF';
+  /** The PDF's URL (the top document's `location.href`). The content script
+   *  reports this when it sees a `document.contentType === 'application/pdf'`
+   *  page — the only MIME signal available, since the tabs API exposes none —
+   *  so the panel can fetch + parse the bytes with pdf.js regardless of whether
+   *  the URL ends in `.pdf`. The SW stamps {@link ExtractResult.tabId} when
+   *  relaying to the panel; the content→SW hop omits it. */
+  url: string;
+  tabId?: number;
 }
 
 // ── Synthesis control (panel → offscreen) ────────────────────────────────────
@@ -59,6 +78,13 @@ export interface SynthStart extends Routed {
    * the sink; for 'content', the SW relays each message to the originating tab.
    */
   sink: 'panel' | 'content';
+  /**
+   * The tab this session reads. The panel sets it to the tab it's showing
+   * (`loadedTabId`); the widget omits it and the SW falls back to the sender's
+   * tab id. The SW records it as the shared session's tab so the *other* surface
+   * can be kept in sync (see {@link SessionSync}).
+   */
+  tabId?: number;
   /**
    * Run epoch assigned by the panel. The offscreen stamps every chunk/progress/
    * done it emits with the epoch of the run that produced it, so the panel can
@@ -145,6 +171,46 @@ export interface SessionState extends Routed {
   phase: SessionPhase;
 }
 
+// ── Shared playback session (panel ⇄ widget sync) ────────────────────────────
+//
+// The side panel and the in-page widget are two views of one playback session.
+// Audio stays with whichever surface *started* it (the "owner"); the other
+// surface is a "follower" that mirrors state but plays no audio and forwards its
+// controls as intents. The SW is the relay and holds the authoritative session.
+
+export interface SessionSync extends Routed {
+  type: 'SESSION_SYNC';
+  /** Which surface owns (plays) the session. */
+  owner: 'content' | 'panel';
+  /** The tab the session reads; a follower ignores syncs for other tabs. */
+  tabId: number;
+  /** 'idle' means the session ended — followers return to their idle UI. */
+  mode: SessionMode;
+  /** Current block index (drives highlight + progress on the follower). */
+  block: number;
+  /** Total block count, so a follower with no article can still draw progress. */
+  total: number;
+  /** Article title, for a follower (e.g. a fresh widget) with no article yet. */
+  title: string;
+}
+
+export interface TransportIntent extends Routed {
+  type: 'TRANSPORT_INTENT';
+  /** The session tab this intent targets; the SW drops a mismatched intent. */
+  tabId: number;
+  action: 'toggle' | 'seek' | 'stop';
+  /** Target block for `seek`. */
+  block?: number;
+}
+
+export interface SessionQuery extends Routed {
+  type: 'SESSION_QUERY';
+  /** The surface asking, so the SW addresses its reply (a {@link SessionSync}). */
+  from: 'content' | 'panel';
+  /** The tab the asker cares about (its own tab, or the panel's loaded tab). */
+  tabId: number;
+}
+
 export interface ErrorMessage extends Routed {
   type: 'ERROR';
   code: string;
@@ -155,6 +221,7 @@ export type Message =
   | ExtractRequest
   | ExtractResult
   | ExtractFailed
+  | ExtractPdf
   | SynthStart
   | SynthSeek
   | SynthStop
@@ -165,6 +232,9 @@ export type Message =
   | ModelStatus
   | ModelDownloadProgress
   | SessionState
+  | SessionSync
+  | TransportIntent
+  | SessionQuery
   | ErrorMessage;
 
 export type MessageOfType<T extends Message['type']> = Extract<Message, { type: T }>;

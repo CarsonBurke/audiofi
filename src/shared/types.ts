@@ -43,3 +43,11 @@ export type SessionPhase =
   | 'playing'
   | 'paused'
   | 'error';
+
+/**
+ * The shared playback mode mirrored across the side panel and the in-page widget
+ * when they act as views of one session. A subset of each surface's local `Mode`
+ * (the panel also has a private 'error'); 'idle' over the wire means the session
+ * has ended. See {@link import('./messages').SessionSync}.
+ */
+export type SessionMode = 'idle' | 'loading' | 'playing' | 'paused' | 'done';
