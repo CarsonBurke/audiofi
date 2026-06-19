@@ -8,7 +8,7 @@ import { defineManifest } from '@crxjs/vite-plugin';
 // type to admit them without `any`.
 export default defineManifest({
   manifest_version: 3,
-  name: 'Article → Audiobook',
+  name: 'Audiofi',
   version: '0.1.0',
   description: 'Turn any article into a spoken audiobook, fully on-device.',
   minimum_chrome_version: '116',

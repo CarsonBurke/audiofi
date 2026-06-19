@@ -1,5 +1,5 @@
 {
-  "name": "article-to-audiobook",
+  "name": "audiofi",
   "version": "0.1.0",
   "description": "Turn any article into a spoken audiobook, fully on-device.",
   "type": "module",
