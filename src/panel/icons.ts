@@ -31,4 +31,16 @@ export const ICONS = {
     STROKE,
     16,
   ),
+  more: svg('<circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>', FILL, 16),
+  chevronDown: svg('<path d="m6 9 6 6 6-6"/>', STROKE, 16),
+  refresh: svg(
+    '<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
+    STROKE,
+    16,
+  ),
+  check: svg('<path d="M20 6 9 17l-5-5"/>', STROKE, 16),
+  // Volume states: high (two waves), low (one wave), muted (x).
+  volumeHigh: svg('<path d="M11 4.7 6 9H2v6h4l5 4.3z"/><path d="M19 5a10 10 0 0 1 0 14" fill="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7" fill="none"/>', `${FILL} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`, 16),
+  volumeLow: svg('<path d="M11 4.7 6 9H2v6h4l5 4.3z"/><path d="M15.5 8.5a5 5 0 0 1 0 7" fill="none"/>', `${FILL} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`, 16),
+  volumeMute: svg('<path d="M11 4.7 6 9H2v6h4l5 4.3z"/><line x1="23" y1="9" x2="17" y2="15" fill="none"/><line x1="17" y1="9" x2="23" y2="15" fill="none"/>', `${FILL} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`, 16),
 } as const;
