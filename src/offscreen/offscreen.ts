@@ -6,6 +6,7 @@
 
 import { onMessage, post } from '../shared/messages';
 import type { Block } from '../shared/types';
+import { DEFAULT_TTS_MODEL, type TtsModelId } from '../shared/tts-models';
 import { chunkBlocks } from '../content/chunk';
 import { encodePcm } from '../shared/pcm';
 import { TtsEngine } from './tts';
@@ -43,6 +44,7 @@ const engine = new TtsEngine();
 // State for the current playback session, retained so SEEK can restart synthesis
 // without the panel re-sending the article.
 let blocks: Block[] = [];
+let model: TtsModelId = DEFAULT_TTS_MODEL;
 let voice = 'af_heart';
 let speed = 1;
 
@@ -78,10 +80,10 @@ function waitWhilePaused(myRun: number): Promise<void> {
 }
 
 async function ensureEngine(): Promise<boolean> {
-  if (engine.ready) return true;
+  if (engine.ready(model)) return true;
   post({ to: outTo(), type: 'MODEL_STATUS', state: 'loading' });
   try {
-    const backend = await engine.init((p) =>
+    const backend = await engine.init(model, (p) =>
       post({ to: outTo(), type: 'MODEL_DOWNLOAD_PROGRESS', ...p }),
     );
     post({ to: outTo(), type: 'MODEL_STATUS', state: 'ready', backend });
@@ -118,7 +120,7 @@ async function runSynthesis(fromBlock: number): Promise<void> {
 
     let result;
     try {
-      result = await engine.synth(chunk.text, voice, speed);
+      result = await engine.synth(model, chunk.text, voice, speed);
     } catch (err) {
       post({
         to: outTo(),
@@ -162,6 +164,7 @@ onMessage('offscreen', (msg) => {
   switch (msg.type) {
     case 'SYNTH_START':
       blocks = msg.blocks;
+      model = msg.model;
       voice = msg.voice;
       speed = msg.speed;
       epoch = msg.epoch;

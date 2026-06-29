@@ -16,6 +16,7 @@
 // consumers decode. Chunking (§6) keeps each encoded buffer small.
 
 import type { Block, BlockKind, Backend, SessionPhase, SessionMode } from './types';
+import type { TtsModelId } from './tts-models';
 
 export type Channel = 'content' | 'sw' | 'offscreen' | 'panel';
 
@@ -68,6 +69,7 @@ export interface ExtractPdf extends Routed {
 export interface SynthStart extends Routed {
   type: 'SYNTH_START';
   blocks: Block[];
+  model: TtsModelId;
   voice: string;
   speed: number;
   /** Begin synthesis at this source block (used by seek). Default 0. */

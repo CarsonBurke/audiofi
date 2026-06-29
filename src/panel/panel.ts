@@ -8,6 +8,16 @@ import { onMessage, post } from '../shared/messages';
 import type { ExtractedArticle, SessionMode } from '../shared/types';
 import { decodePcm } from '../shared/pcm';
 import { VOICES, DEFAULT_VOICE, isKnownVoice } from '../shared/voices';
+import {
+  DEFAULT_TTS_MODEL,
+  TTS_MODELS,
+  isKnownTtsModel,
+  isPlayableTtsModel,
+  ttsModelLabel,
+  ttsModelPrototypeNote,
+  ttsModelWarningNote,
+  type TtsModelId,
+} from '../shared/tts-models';
 import { estimateListenSeconds } from '../content/chunk';
 import { AudioPlayer, type QueuedChunk } from './player';
 import { initTheme, cycleTheme, themeIcon } from './theme';
@@ -51,6 +61,7 @@ const HIGH_WATER = 3;
 const LOW_WATER = 1;
 
 const KEY_VOICE = 'settings.voice';
+const KEY_MODEL = 'settings.model';
 const KEY_SPEED = 'settings.speed';
 const KEY_VOLUME = 'settings.volume';
 
@@ -89,6 +100,7 @@ const els = {
   next: $<HTMLButtonElement>('next'),
   stop: $<HTMLButtonElement>('stop'),
   voiceSlot: $<HTMLDivElement>('voice-slot'),
+  modelSelect: $<HTMLSelectElement>('model-select'),
   speedSlot: $<HTMLDivElement>('speed-slot'),
   volumeSlot: $<HTMLDivElement>('volume-slot'),
   body: $<HTMLElement>('body'),
@@ -109,6 +121,7 @@ let blockEls: HTMLElement[] = [];
 let currentBlock = 0;
 let mode: Mode = 'idle';
 let player: AudioPlayer | null = null;
+let ttsModel: TtsModelId = DEFAULT_TTS_MODEL;
 let voice = DEFAULT_VOICE;
 let speed = 1;
 let volume = 1;
@@ -183,6 +196,8 @@ function injectControlStyles(): void {
 }
 
 function buildControls(): void {
+  buildModelSelect();
+
   voiceSelect = new Select({
     options: VOICES.map((v) => ({ value: v.id, label: v.label })),
     value: voice,
@@ -241,6 +256,27 @@ function buildControls(): void {
   els.volumeSlot.append(volumeControl.el);
 }
 
+function buildModelSelect(): void {
+  els.modelSelect.replaceChildren(
+    ...TTS_MODELS.map((model) => {
+      const opt = document.createElement('option');
+      opt.value = model.id;
+      opt.textContent = model.playable ? model.label : `${model.label} (prototype)`;
+      opt.title = model.description;
+      return opt;
+    }),
+  );
+  els.modelSelect.value = ttsModel;
+  els.modelSelect.addEventListener('change', () => {
+    const next = els.modelSelect.value;
+    ttsModel = isKnownTtsModel(next) ? next : DEFAULT_TTS_MODEL;
+    els.modelSelect.value = ttsModel;
+    void chrome.storage.local.set({ [KEY_MODEL]: ttsModel });
+    if (isActive()) stop();
+    reflectModelAvailability();
+  });
+}
+
 // Apply a volume level to the live player and the trigger glyph; optionally
 // persist it. `lastVolume` tracks the last audible level for mute/un-mute.
 function applyVolume(v: number, persist: boolean): void {
@@ -259,17 +295,41 @@ function toggleMute(): void {
 }
 
 async function loadSettings(): Promise<void> {
-  const s = await chrome.storage.local.get([KEY_VOICE, KEY_SPEED, KEY_VOLUME]);
+  const s = await chrome.storage.local.get([KEY_MODEL, KEY_VOICE, KEY_SPEED, KEY_VOLUME]);
+  ttsModel = isKnownTtsModel(s[KEY_MODEL]) ? s[KEY_MODEL] : DEFAULT_TTS_MODEL;
   voice = isKnownVoice(s[KEY_VOICE]) ? s[KEY_VOICE] : DEFAULT_VOICE;
   speed = typeof s[KEY_SPEED] === 'number' ? clampSpeed(s[KEY_SPEED]) : 1;
   volume = typeof s[KEY_VOLUME] === 'number' ? clampVolume(s[KEY_VOLUME]) : 1;
   if (volume > 0) lastVolume = volume;
+  els.modelSelect.value = ttsModel;
   voiceSelect.setValue(voice);
   speedControl.setValue(speed);
   speedControl.setTrigger(formatSpeed(speed));
   volumeControl.setValue(volume);
   volumeControl.setTrigger(volumeIcon(volume));
   volumeControl.setTriggerLabel(volume > 0 ? 'Mute' : 'Unmute');
+  reflectModelAvailability();
+}
+
+function reflectModelAvailability(): void {
+  const playable = isPlayableTtsModel(ttsModel);
+  els.modelSelect.title = playable
+    ? 'Voice model'
+    : `${ttsModelLabel(ttsModel)} is not wired into playback yet.`;
+  renderTransport();
+  if (!playable) {
+    setBanner(
+      `${ttsModelLabel(ttsModel)} is not wired into playback yet. ${ttsModelPrototypeNote(ttsModel)} Choose Kokoro to play articles.`,
+      'info',
+    );
+  } else {
+    const warning = ttsModelWarningNote(ttsModel);
+    if (warning && (mode === 'idle' || mode === 'done')) {
+      setBanner(warning, 'info');
+    } else if (mode === 'idle' || mode === 'done') {
+      setBanner(null);
+    }
+  }
 }
 
 // ── Active-tab following ─────────────────────────────────────────────────────
@@ -632,6 +692,7 @@ function setArticle(a: ExtractedArticle): void {
   els.placeholder.hidden = true;
   setBanner(null);
   setMode('idle');
+  reflectModelAvailability();
 }
 
 // Tear down the reader view and show the empty-state placeholder (e.g. when the
@@ -699,7 +760,8 @@ function renderTransport(): void {
   els.play.setAttribute('aria-label', playing ? 'Pause' : 'Play');
   els.play.title = playing ? 'Pause' : 'Play';
   const hasArticle = article !== null;
-  els.play.disabled = !hasArticle;
+  const canPlaySelectedModel = isPlayableTtsModel(ttsModel);
+  els.play.disabled = !hasArticle || !canPlaySelectedModel;
   els.prev.disabled = !hasArticle;
   els.next.disabled = !hasArticle;
   els.stop.disabled = !hasArticle || shown === 'idle';
@@ -750,6 +812,10 @@ async function togglePlay(): Promise<void> {
     return;
   }
   if (!article) return;
+  if (!isPlayableTtsModel(ttsModel)) {
+    reflectModelAvailability();
+    return;
+  }
   if (mode === 'playing') {
     await player?.suspend();
     userPaused = true;
@@ -772,6 +838,10 @@ async function togglePlay(): Promise<void> {
 
 function startSynthesis(fromBlock: number): void {
   if (!article) return;
+  if (!isPlayableTtsModel(ttsModel)) {
+    reflectModelAvailability();
+    return;
+  }
   currentBlock = clamp(fromBlock);
   // We become the session owner. Capture the tab now (not read live) so our
   // published syncs stay attributed to the right tab even if the active tab
@@ -796,6 +866,7 @@ function startSynthesis(fromBlock: number): void {
     to: 'sw',
     type: 'SYNTH_START',
     blocks: article.blocks,
+    model: ttsModel,
     voice,
     speed,
     fromBlock: currentBlock,

@@ -121,6 +121,14 @@
       dark:border-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200 dark:hover:text-neutral-900;
   }
 
+  .model-select {
+    @apply h-8 max-w-32 rounded-lg border border-neutral-200 bg-white px-2 pr-7 text-xs font-medium
+      text-neutral-700 outline-none transition hover:border-neutral-400 hover:text-neutral-900
+      focus-visible:outline-2 focus-visible:outline-neutral-900
+      dark:border-neutral-800 dark:bg-black dark:text-neutral-300 dark:hover:border-neutral-600
+      dark:hover:text-neutral-100 dark:focus-visible:outline-neutral-100;
+  }
+
   /* Refresh: a small dot badges the button when the active tab has drifted away
      from what the panel is showing (playback is in progress, so we don't auto-
      follow); clicking it loads the current page. The icon spins while extracting. */

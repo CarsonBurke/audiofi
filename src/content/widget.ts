@@ -11,6 +11,11 @@ import { AudioPlayer, type QueuedChunk } from '../panel/player';
 import { ICONS } from '../panel/icons';
 import { decodePcm } from '../shared/pcm';
 import { DEFAULT_VOICE, isKnownVoice, VOICES } from '../shared/voices';
+import {
+  DEFAULT_TTS_MODEL,
+  resolvePlayableTtsModel,
+  type TtsModelId,
+} from '../shared/tts-models';
 import { Select, SELECT_STYLE } from '../ui/select';
 import { Slider, SLIDER_STYLE } from '../ui/slider';
 import {
@@ -161,6 +166,7 @@ class Widget {
   // Block count of the session we're following (we may have no local article).
   private followerTotal = 0;
   private voice = DEFAULT_VOICE;
+  private ttsModel: TtsModelId = DEFAULT_TTS_MODEL;
   private speed = 1;
   private volume = 1;
   // Resolves once persisted voice/speed are loaded; start() awaits it so the
@@ -520,6 +526,7 @@ class Widget {
       to: 'sw',
       type: 'SYNTH_START',
       blocks: this.article.blocks,
+      model: this.ttsModel,
       voice: this.voice,
       speed: this.speed,
       fromBlock: this.currentBlock,
@@ -551,10 +558,12 @@ class Widget {
   private async loadSettings(): Promise<void> {
     const s = await chrome.storage.local.get([
       'settings.voice',
+      'settings.model',
       'settings.speed',
       'settings.volume',
     ]);
     this.voice = isKnownVoice(s['settings.voice']) ? s['settings.voice'] : DEFAULT_VOICE;
+    this.ttsModel = resolvePlayableTtsModel(s['settings.model']);
     this.speed = typeof s['settings.speed'] === 'number' ? clampSpeed(s['settings.speed']) : 1;
     this.volume = typeof s['settings.volume'] === 'number' ? clampVolume(s['settings.volume']) : 1;
   }

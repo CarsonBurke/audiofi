@@ -386,6 +386,7 @@ async function route(
         to: 'offscreen',
         type: 'SYNTH_START',
         blocks: msg.blocks,
+        model: msg.model,
         voice: msg.voice,
         speed: msg.speed,
         fromBlock: msg.fromBlock,

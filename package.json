@@ -12,6 +12,7 @@
     "prebuild": "node scripts/sync-ort.mjs && node scripts/sync-pdf.mjs",
     "build": "tsc --noEmit && vite build",
     "build:harness": "vite build --config vite.harness.config.ts",
+    "probe:chatterbox": "node scripts/chatterbox-prototype.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -32,6 +33,7 @@
     "@types/chrome": "^0.0.299",
     "happy-dom": "^15.11.7",
     "tailwindcss": "^4.3.1",
+    "transformers-v4": "npm:@huggingface/transformers@4.2.0",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
     "vitest": "^2.1.8"

@@ -137,7 +137,10 @@
 ## 4. TTS Engine
 
 - **Runtime:** `transformers.js` (preferred) or ONNX Runtime Web, WebGPU backend
-  with WASM fallback.
+  with WASM fallback. Production Kokoro currently stays on the
+  `kokoro-js`/Transformers.js v3 stack; a direct root upgrade to
+  Transformers.js v4 installs a second runtime and breaks the current ORT sync
+  layout. See `docs/tts-model-strategy-2026.md`.
 - **Primary model:** **Kokoro TTS** (~82M params) via `kokoro-js`, which supports
   WebGPU today (`KokoroTTS.from_pretrained(id, { device: "webgpu", dtype: "fp32" })`).
   - **Precision is backend-dependent:**
@@ -148,6 +151,17 @@
       on the CPU path.
 - **Fallback / low-end model:** **Piper** (VITS), per-voice ONNX ~20–60MB,
   fast on pure WASM. Used when WebGPU is unavailable or the device is weak.
+- **Experimental v4 path:** **MMS English** via `transformers-v4` alias. This
+  is a small stock Transformers.js v4 pipeline that actually instantiates today,
+  but it is single-voice 16 kHz VITS and CC-BY-NC-4.0 upstream, so it is not a
+  default replacement.
+- **Next model candidates:** **KittenTTS Nano** and **Chatterbox Turbo ONNX**.
+  Both are browser/ONNX candidates, but stock `@huggingface/transformers@4.2.0`
+  `pipeline('text-to-speech', ...)` does not currently support their model
+  types. Treat them as custom-adapter prototypes until startup latency, memory,
+  download size, and cache behavior are measured in an MV3 offscreen document.
+  `pnpm probe:chatterbox` verifies the isolated v4 API surface and estimates the
+  candidate footprint without downloading weights.
 - **Backend selection at runtime:**
   ```
   WebGPU adapter available?  → Kokoro on WebGPU (fp32)
@@ -357,4 +371,3 @@ Typed messages over `chrome.runtime` / port connections. Sketch:
 - Normalization edge cases (math, code, non-Latin scripts) — bound scope for v1.
 - Model hosting/CDN reliability and CSP `connect-src` for downloads.
 ```
-
