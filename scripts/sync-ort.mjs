@@ -23,6 +23,12 @@ const FILES = [
   'ort-wasm-simd-threaded.jsep.wasm',
 ];
 
+const V4_FILES = [
+  ...FILES,
+  'ort-wasm-simd-threaded.asyncify.mjs',
+  'ort-wasm-simd-threaded.asyncify.wasm',
+];
+
 await copyTransformersV3Runtime();
 await copyTransformersV4Runtime();
 
@@ -32,7 +38,7 @@ async function copyTransformersV3Runtime() {
   const { version } = JSON.parse(
     await readFile(join(root, 'node_modules', '@huggingface', 'transformers', 'package.json'), 'utf8'),
   );
-  await copyFiles(src, dest);
+  await copyFiles(src, dest, FILES);
   console.log(`[sync-ort] copied ORT runtime (transformers ${version}) → public/ort`);
 }
 
@@ -51,14 +57,14 @@ async function copyTransformersV4Runtime() {
   const src = join(ortRoot, 'dist');
   const dest = join(root, 'public', 'ort-v4');
   const { version } = JSON.parse(await readFile(ortPackage, 'utf8'));
-  await copyFiles(src, dest);
+  await copyFiles(src, dest, V4_FILES);
   console.log(`[sync-ort] copied ORT runtime (transformers-v4 ORT ${version}) → public/ort-v4`);
 }
 
-async function copyFiles(src, dest) {
+async function copyFiles(src, dest, files) {
   await rm(dest, { recursive: true, force: true });
   await mkdir(dest, { recursive: true });
-  for (const file of FILES) {
+  for (const file of files) {
     await copyFile(join(src, file), join(dest, file));
   }
 }

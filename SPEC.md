@@ -150,18 +150,24 @@
     - **WASM → q8** (~80–90MB). Quantized is fine (and preferable for size/speed)
       on the CPU path.
 - **Fallback / low-end model:** **Piper** (VITS), per-voice ONNX ~20–60MB,
-  fast on pure WASM. Used when WebGPU is unavailable or the device is weak.
-- **Experimental v4 path:** **MMS English** via `transformers-v4` alias. This
-  is a small stock Transformers.js v4 pipeline that actually instantiates today,
-  but it is single-voice 16 kHz VITS and CC-BY-NC-4.0 upstream, so it is not a
-  default replacement.
-- **Next model candidates:** **KittenTTS Nano** and **Chatterbox Turbo ONNX**.
-  Both are browser/ONNX candidates, but stock `@huggingface/transformers@4.2.0`
-  `pipeline('text-to-speech', ...)` does not currently support their model
-  types. Treat them as custom-adapter prototypes until startup latency, memory,
-  download size, and cache behavior are measured in an MV3 offscreen document.
+  fast on pure WASM. Candidate only; not currently wired into the extension UI.
+- **Experimental v4 paths:** **MMS English**, **KittenTTS Nano**, and
+  **Chatterbox ONNX** are exposed through the model switcher. They run through
+  the isolated `transformers-v4` alias so Kokoro can remain on its stable v3
+  runtime.
+  - **MMS English** uses the stock v4 text-to-speech pipeline. It is small and
+    useful for v4 runtime testing, but single-voice, 16 kHz, and CC-BY-NC-4.0
+    upstream, so it is not a default replacement.
+  - **KittenTTS Nano** uses a custom StyleTTS2 adapter because stock
+    `@huggingface/transformers@4.2.0` does not support it through
+    `pipeline('text-to-speech', ...)`.
+  - **Chatterbox ONNX** uses the browser-demo `ChatterboxModel` API and the
+    `onnx-community/chatterbox-ONNX` export with a default prompt voice.
+    ResembleAI's Turbo repo remains a future prompt-audio path.
+  Treat all three as experimental until startup latency, memory, download size,
+  cancellation, and cache behavior are measured in the MV3 offscreen document.
   `pnpm probe:chatterbox` verifies the isolated v4 API surface and estimates the
-  candidate footprint without downloading weights.
+  Chatterbox footprint without downloading weights.
 - **Backend selection at runtime:**
   ```
   WebGPU adapter available?  → Kokoro on WebGPU (fp32)

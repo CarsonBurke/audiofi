@@ -36,21 +36,26 @@ Weaknesses:
   paralinguistic tags beyond what text normalization can fake.
 - Not SOTA for expressiveness in 2026.
 
-### Chatterbox Turbo
+### Chatterbox ONNX / Chatterbox Turbo
 
-Best next experiment, not a default yet. Resemble's Chatterbox Turbo ONNX model
-is a 350M-parameter TTS model with lower compute/VRAM than their earlier models
-and native paralinguistic tags such as `[laugh]`, `[chuckle]`, and `[cough]`.
-It is browser/WebGPU-oriented, but stock `pipeline('text-to-speech', ...)` in
-`@huggingface/transformers@4.2.0` does not instantiate it yet:
-`model_type: chatterbox` is not mapped to a text-to-audio model class.
+Advanced experimental path, not a default. Stock
+`pipeline('text-to-speech', ...)` in `@huggingface/transformers@4.2.0` still
+does not instantiate `model_type: chatterbox`, but the package exports
+`ChatterboxModel`, `AutoProcessor`, and `Tensor`. Resemble's official browser
+demo uses those classes directly with `onnx-community/chatterbox-ONNX`, four
+ONNX sessions, a model-specific dtype map, `encode_speech(...)`, and
+`generate(...)`.
 
 Why not switch immediately:
 - It is materially heavier than Kokoro.
-- The model card's ONNX usage involves multiple sessions and token generation,
-  not the simple `KokoroTTS.generate(text)` API we have today.
-- It would need a dedicated offscreen runtime path, download accounting, cache
-  management, and real measurements on low-end devices before it is productized.
+- The ONNX usage involves multiple sessions and token generation, not the
+  simple `KokoroTTS.generate(text)` API.
+- First load is about 1.4 GB for the browser-demo export and needs explicit
+  product treatment around download size, cancellation, cache status, and
+  expected latency.
+- ResembleAI's `chatterbox-turbo-ONNX` repo does not currently include
+  `default_voice.wav`, so Audiofi cannot use Turbo directly without a
+  prompt-audio capture flow or bundled prompt voice.
 
 Candidate role:
 - Optional "expressive/local" model after a prototype proves acceptable startup,
@@ -60,7 +65,8 @@ Prototype status:
 - `transformers-v4` is installed as a dev-only package alias pointing at
   `@huggingface/transformers@4.2.0`.
 - `pnpm probe:chatterbox` verifies that the alias exports `ChatterboxModel`,
-  `AutoProcessor`, and `Tensor`.
+  `AutoProcessor`, and `Tensor`, and checks whether the Turbo export has a
+  default prompt voice.
 - The probe estimates model footprint without downloading weights. Current
   `onnx-community/chatterbox-ONNX` footprint:
   - WebGPU profile: about 1.4 GB across 14 files.
@@ -69,9 +75,18 @@ Prototype status:
     `conditional_decoder.onnx_data` at about 509.2 MB, and the quantized
     language model data at about 290.6 MB WebGPU / 337.2 MB WASM.
 
+Implementation status:
+- Audiofi now exposes a playable experimental Chatterbox option backed by
+  `onnx-community/chatterbox-ONNX`.
+- The offscreen adapter mirrors the official browser demo: WebGPU uses
+  `language_model: q4f16`, WASM uses `language_model: q4`, the other sessions
+  use `fp32`, and the default prompt voice is encoded once then reused.
+- The app's voice selector is ignored for this model until a prompt-audio or
+  speaker selection UI exists.
+
 This footprint is too large to silently download as the default article reader
-voice. It needs an explicit model choice, download estimate, cancellation, and
-clear "expressive local voice" positioning.
+voice. Keep Kokoro as default until Chatterbox has first-load UX, cancellation,
+cache reporting, and real low-end-device measurements.
 
 ### Transformers.js v4
 
@@ -94,12 +109,26 @@ Conclusion:
 
 ### KittenTTS Nano
 
-Best small 2026 candidate on paper, but not stock-pipeline-compatible in the
-current v4 package. The ONNX model card lists StyleTTS2, 15M parameters, 24 kHz,
-eight voices, WebGPU/WASM runtime, and Apache-2.0 licensing. A direct probe with
-`@huggingface/transformers@4.2.0` fails before downloading weights:
-`model_type: style_text_to_speech_2` is not supported by the text-to-audio
-pipeline. Treat this as a custom-adapter candidate, not a drop-in library swap.
+Small 2026 candidate now wired as an experimental playable model through a
+custom adapter. The ONNX model card lists StyleTTS2, 15M parameters, 24 kHz,
+eight voices, WebGPU/WASM runtime, and Apache-2.0 licensing.
+
+Important boundary: this is not stock-pipeline-compatible in
+`@huggingface/transformers@4.2.0`. A direct
+`pipeline('text-to-speech', 'onnx-community/KittenTTS-Nano-v0.8-ONNX')` probe
+still fails because `model_type: style_text_to_speech_2` is not supported by the
+text-to-audio pipeline. The playable path instead mirrors the official browser
+demo's preprocessing shape: `phonemizer`, Kitten's IPA token table, `voices.npz`
+parsing, and a direct `StyleTextToSpeech2Model.from_pretrained(...)` call.
+
+Current adapter status:
+- Model: `onnx-community/KittenTTS-Nano-v0.8-ONNX`
+- Runtime: `transformers-v4` direct `StyleTextToSpeech2Model`; WebGPU with WASM
+  fallback.
+- Extra asset: `voices.npz` (about 3.1 MB) loaded from the model repo and parsed
+  in the offscreen document.
+- Default voice mapping: existing Audiofi voice selections fall back to Kitten's
+  Bella voice until the UI grows per-model voice lists.
 
 ### MMS English
 
@@ -128,11 +157,11 @@ path.
 2. Keep MMS English as an explicit experimental v4 path only.
 3. Add device/memory telemetry around first-load time, chunk synthesis latency,
    and backend fallback rate.
-4. Build separate KittenTTS and Chatterbox adapters only if we accept custom
-   ONNX/phonemizer/model glue outside stock Transformers.js pipelines.
-5. Ship advanced model selection only after prototypes can report model size,
+4. Keep the Chatterbox adapter experimental until it reports model size,
    estimated download, cache status, backend, and expected latency before the
    user starts playback.
+5. Build separate KittenTTS, Supertonic, or Turbo adapters only if we accept
+   model-specific ONNX/processor glue outside stock Transformers.js pipelines.
 6. Revisit the default once Chatterbox-class quality can run within Audiofi's
    latency and memory budget on typical Chrome laptops.
 
@@ -141,6 +170,10 @@ path.
 - Kokoro upstream: https://github.com/hexgrad/kokoro
 - Chatterbox Turbo ONNX model card:
   https://huggingface.co/ResembleAI/chatterbox-turbo-ONNX
+- Official Chatterbox browser demo:
+  https://github.com/resemble-ai/transformersjs-chatterbox-demo
+- Chatterbox browser-demo ONNX export:
+  https://huggingface.co/onnx-community/chatterbox-ONNX
 - KittenTTS Nano ONNX model card:
   https://huggingface.co/onnx-community/KittenTTS-Nano-v0.8-ONNX
 - MMS English model card:

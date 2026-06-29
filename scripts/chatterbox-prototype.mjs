@@ -5,11 +5,16 @@
 // This intentionally does not download model weights by default. It verifies
 // that the isolated v4 alias exposes the APIs we need and estimates the model
 // footprint from Hugging Face headers so product decisions have hard numbers.
+// The playable browser-demo adapter currently targets onnx-community's export
+// because it includes a default prompt voice; ResembleAI's Turbo export still
+// needs a user/bundled prompt-audio path before Audiofi can use it directly.
 
 import { AutoProcessor, ChatterboxModel, Tensor, env } from 'transformers-v4';
 
 const MODEL_ID = 'onnx-community/chatterbox-ONNX';
+const TURBO_MODEL_ID = 'ResembleAI/chatterbox-turbo-ONNX';
 const BASE = `https://huggingface.co/${MODEL_ID}/resolve/main`;
+const TURBO_BASE = `https://huggingface.co/${TURBO_MODEL_ID}/resolve/main`;
 
 const COMMON_FILES = [
   'config.json',
@@ -56,9 +61,15 @@ for (const [profile, files] of Object.entries(PROFILES)) {
 
 const result = {
   modelId: MODEL_ID,
+  turboModelId: TURBO_MODEL_ID,
   sampleRate: 24_000,
   note: 'Footprints use HEAD Content-Length / x-linked-size. No model weights are downloaded.',
   api,
+  turbo: {
+    hasDefaultVoice: await remoteExists(`${TURBO_BASE}/default_voice.wav`),
+    note:
+      'ResembleAI Turbo has no default_voice.wav in the ONNX repo; Audiofi needs prompt-audio capture or a bundled prompt before it can synthesize without user setup.',
+  },
   profiles: footprints,
 };
 
@@ -66,10 +77,12 @@ if (json) {
   console.log(JSON.stringify(result, null, 2));
 } else {
   console.log(`Chatterbox prototype: ${MODEL_ID}`);
+  console.log(`Turbo reference: ${TURBO_MODEL_ID}`);
   console.log(`Transformers.js v4 alias: ${api.transformersVersion}`);
   console.log(
     `API: ChatterboxModel=${api.hasChatterboxModel}, AutoProcessor=${api.hasAutoProcessor}, Tensor=${api.hasTensor}`,
   );
+  console.log(`Turbo default voice present: ${result.turbo.hasDefaultVoice}`);
   for (const [profile, data] of Object.entries(footprints)) {
     console.log(`\n${profile}: ${formatBytes(data.totalBytes)} across ${data.files.length} files`);
     for (const file of data.files) {
@@ -115,6 +128,14 @@ async function remoteSize(path) {
     throw new Error(`GET ${path} failed: ${body.status} ${body.statusText}`);
   }
   return (await body.arrayBuffer()).byteLength;
+}
+
+async function remoteExists(url) {
+  const res = await fetch(url, {
+    method: 'HEAD',
+    redirect: 'follow',
+  });
+  return res.ok;
 }
 
 function formatBytes(bytes) {

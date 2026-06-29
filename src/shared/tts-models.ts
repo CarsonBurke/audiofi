@@ -29,16 +29,20 @@ export const TTS_MODELS: TtsModelOption[] = [
   {
     id: 'kitten-nano',
     label: 'KittenTTS Nano',
-    playable: false,
-    description: 'Small 15M StyleTTS2 candidate, about 57 MB.',
-    prototypeNote: 'Smallest WebGPU/WASM candidate found; needs an engine adapter and quality testing.',
+    playable: true,
+    description: 'Small 15M StyleTTS2 model using a custom browser adapter.',
+    warningNote:
+      'Experimental KittenTTS path. Uses a custom phonemizer/StyleTTS2 adapter because Transformers.js 4.2.0 does not support it through the stock text-to-audio pipeline.',
   },
   {
     id: 'chatterbox-turbo',
-    label: 'Chatterbox Turbo',
-    playable: false,
-    description: 'Expressive voice-cloning/control candidate, about 539 MB.',
-    prototypeNote: 'Best advanced control candidate; too large for default browser playback.',
+    label: 'Chatterbox ONNX',
+    playable: true,
+    description: 'Large expressive local model using the official browser-demo adapter.',
+    prototypeNote:
+      'Uses onnx-community/chatterbox-ONNX with its default prompt voice; ResembleAI Turbo still needs a prompt-audio path.',
+    warningNote:
+      'Experimental Chatterbox path. First load is roughly 1.4 GB and uses the bundled default prompt voice; Kokoro remains the default.',
   },
 ];
 
