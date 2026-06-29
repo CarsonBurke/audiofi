@@ -1,8 +1,10 @@
 node_modules
 dist
+dist-harness
 *.log
 .DS_Store
 .claude
 .codex
 public/ort/
+public/ort-v4/
 public/pdf/

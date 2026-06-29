@@ -72,7 +72,7 @@ export default defineManifest({
   // service worker can create the offscreen page and ORT can load WASM chunks.
   web_accessible_resources: [
     {
-      resources: ['src/offscreen/offscreen.html', 'assets/*', 'ort/*', 'pdf/*'],
+      resources: ['src/offscreen/offscreen.html', 'assets/*', 'ort/*', 'ort-v4/*', 'pdf/*'],
       matches: ['<all_urls>'],
     },
   ],
