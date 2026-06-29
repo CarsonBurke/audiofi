@@ -1,13 +1,14 @@
-// Article extraction (SPEC §3.1). Heuristic Readability — no LLM (§12). Produces
-// a structured, ordered Block[] that preserves paragraph and heading boundaries
-// (a flat string would lose the structure the player and chunker rely on), then
-// runs the normalization pass before handing the result on.
+// Article extraction (SPEC §3.1). Heuristic local extractors — no LLM (§12).
+// Produces a structured, ordered Block[] that preserves paragraph and heading
+// boundaries (a flat string would lose the structure the player and chunker rely
+// on), then runs the normalization pass before handing the result on.
 
 import { Readability, isProbablyReaderable } from '@mozilla/readability';
+import Defuddle from 'defuddle';
 import type { Block, ExtractedArticle } from '../shared/types';
 import { normalizeBlocks, CODE_PLACEHOLDER, TABLE_PLACEHOLDER } from './normalize';
 
-/** Cheap gate: is this page plausibly an article? (SPEC §3.1 step 1.) */
+/** Cheap signal: is this page plausibly an article? */
 export function isLikelyArticle(doc: Document = document): boolean {
   return isProbablyReaderable(doc);
 }
@@ -21,6 +22,20 @@ export function extractArticle(
   doc: Document = document,
   sourceUrl: string = location.href,
 ): ExtractedArticle | null {
+  const readabilityArticle = extractWithReadability(doc, sourceUrl);
+  if (readabilityArticle && readabilityArticle.blocks.length > 0) {
+    return readabilityArticle;
+  }
+
+  const defuddleArticle = extractWithDefuddle(doc, sourceUrl);
+  if (defuddleArticle && defuddleArticle.blocks.length > 0) {
+    return defuddleArticle;
+  }
+
+  return null;
+}
+
+function extractWithReadability(doc: Document, sourceUrl: string): ExtractedArticle | null {
   const clone = doc.cloneNode(true) as Document;
   const article = new Readability(clone).parse();
   if (!article || !article.content) return null;
@@ -37,6 +52,23 @@ export function extractArticle(
   };
 }
 
+function extractWithDefuddle(doc: Document, sourceUrl: string): ExtractedArticle | null {
+  const clone = doc.cloneNode(true) as Document;
+  const article = new Defuddle(clone, { url: sourceUrl, useAsync: false }).parse();
+  if (!article.content) return null;
+
+  const blocks = normalizeBlocks(htmlToBlocks(article.content));
+
+  return {
+    title: clean(article.title) || doc.title || 'Untitled',
+    byline: clean(article.author) || null,
+    siteName: clean(article.site) || clean(article.domain) || null,
+    lang: clean(article.language) || doc.documentElement.lang || null,
+    blocks,
+    sourceUrl,
+  };
+}
+
 const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
 
 /**
@@ -48,6 +80,10 @@ const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
 export function htmlToBlocks(html: string): Block[] {
   const parsed = new DOMParser().parseFromString(html, 'text/html');
   const blocks: Block[] = [];
+  if (parsed.body.children.length === 0) {
+    pushText(blocks, 'paragraph', parsed.body.textContent);
+    return blocks;
+  }
   walk(parsed.body, blocks);
   return blocks;
 }
@@ -68,6 +104,8 @@ function walk(node: Element, out: Block[]): void {
       if (caption) pushText(out, 'paragraph', caption.textContent);
     } else if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') {
       // skip
+    } else if (child.children.length === 0) {
+      pushText(out, 'paragraph', child.textContent);
     } else {
       walk(child, out); // DIV / SECTION / ARTICLE / UL / OL / … → descend
     }

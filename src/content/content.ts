@@ -50,12 +50,7 @@ onMessage('content', async (msg) => {
   }
 
   try {
-    const { extractArticle, isLikelyArticle } = await import('./extract');
-
-    if (!isLikelyArticle()) {
-      fail('not-article');
-      return;
-    }
+    const { extractArticle } = await import('./extract');
 
     const article = extractArticle();
     if (!article) {
