@@ -10,7 +10,7 @@
 // (.mjs) and wasm are versioned together — so this always copies from
 // node_modules rather than relying on a committed snapshot.
 
-import { copyFile, mkdir, readFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,6 +27,7 @@ const { version } = JSON.parse(
   await readFile(join(root, 'node_modules', '@huggingface', 'transformers', 'package.json'), 'utf8'),
 );
 
+await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 for (const file of FILES) {
   await copyFile(join(src, file), join(dest, file));
