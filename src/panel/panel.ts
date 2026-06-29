@@ -11,8 +11,8 @@ import { VOICES, DEFAULT_VOICE, isKnownVoice } from '../shared/voices';
 import {
   DEFAULT_TTS_MODEL,
   TTS_MODELS,
-  isKnownTtsModel,
   isPlayableTtsModel,
+  resolvePlayableTtsModel,
   ttsModelLabel,
   ttsModelPrototypeNote,
   ttsModelWarningNote,
@@ -263,13 +263,13 @@ function buildModelSelect(): void {
       opt.value = model.id;
       opt.textContent = model.playable ? model.label : `${model.label} (prototype)`;
       opt.title = model.description;
+      opt.disabled = !model.playable;
       return opt;
     }),
   );
   els.modelSelect.value = ttsModel;
   els.modelSelect.addEventListener('change', () => {
-    const next = els.modelSelect.value;
-    ttsModel = isKnownTtsModel(next) ? next : DEFAULT_TTS_MODEL;
+    ttsModel = resolvePlayableTtsModel(els.modelSelect.value);
     els.modelSelect.value = ttsModel;
     void chrome.storage.local.set({ [KEY_MODEL]: ttsModel });
     if (isActive()) stop();
@@ -296,7 +296,7 @@ function toggleMute(): void {
 
 async function loadSettings(): Promise<void> {
   const s = await chrome.storage.local.get([KEY_MODEL, KEY_VOICE, KEY_SPEED, KEY_VOLUME]);
-  ttsModel = isKnownTtsModel(s[KEY_MODEL]) ? s[KEY_MODEL] : DEFAULT_TTS_MODEL;
+  ttsModel = resolvePlayableTtsModel(s[KEY_MODEL]);
   voice = isKnownVoice(s[KEY_VOICE]) ? s[KEY_VOICE] : DEFAULT_VOICE;
   speed = typeof s[KEY_SPEED] === 'number' ? clampSpeed(s[KEY_SPEED]) : 1;
   volume = typeof s[KEY_VOLUME] === 'number' ? clampVolume(s[KEY_VOLUME]) : 1;

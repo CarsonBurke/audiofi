@@ -1,4 +1,4 @@
-export type TtsModelId = 'kokoro' | 'mms-eng' | 'kitten-nano' | 'chatterbox-turbo';
+export type TtsModelId = 'kokoro' | 'chatterbox-turbo';
 
 export interface TtsModelOption {
   id: TtsModelId;
@@ -16,33 +16,17 @@ export const TTS_MODELS: TtsModelOption[] = [
     id: 'kokoro',
     label: 'Kokoro',
     playable: true,
-    description: 'Fast local voice, 82M params.',
-  },
-  {
-    id: 'mms-eng',
-    label: 'MMS English',
-    playable: true,
-    description: 'Tiny stock Transformers.js v4 VITS model.',
-    warningNote:
-      'Experimental v4 path. Single 16 kHz English voice and CC-BY-NC-4.0 upstream license; not a production default.',
-  },
-  {
-    id: 'kitten-nano',
-    label: 'KittenTTS Nano',
-    playable: true,
-    description: 'Small 15M StyleTTS2 model using a custom browser adapter.',
-    warningNote:
-      'Experimental KittenTTS path. Uses a custom phonemizer/StyleTTS2 adapter because Transformers.js 4.2.0 does not support it through the stock text-to-audio pipeline.',
+    description: 'Fast local voice, 82M params. Validated in the extension.',
   },
   {
     id: 'chatterbox-turbo',
     label: 'Chatterbox ONNX',
-    playable: true,
-    description: 'Large expressive local model using the official browser-demo adapter.',
+    playable: false,
+    description: 'Large expressive local prototype using the official browser-demo adapter.',
     prototypeNote:
-      'Uses onnx-community/chatterbox-ONNX with its default prompt voice; ResembleAI Turbo still needs a prompt-audio path.',
+      'Uses onnx-community/chatterbox-ONNX with its default prompt voice, but first-load UX and live offscreen playback are not product-ready yet.',
     warningNote:
-      'Experimental Chatterbox path. First load is roughly 1.4 GB and uses the bundled default prompt voice; Kokoro remains the default.',
+      'Chatterbox is disabled until startup latency, memory, download size, cancellation, and cache behavior are validated in MV3.',
   },
 ];
 

@@ -1,17 +1,14 @@
 // TTS engine wrapper (SPEC §4). Kokoro-82M remains the default via kokoro-js.
 // Experimental models can be loaded through the isolated Transformers.js v4
-// alias without replacing Kokoro's v3 runtime. Backends are chosen per adapter:
-// Kokoro uses WebGPU → WASM fallback; v4 "cpu" is reported as the WASM fallback.
+// alias without replacing Kokoro's v3 runtime.
 
 import { KokoroTTS } from 'kokoro-js';
 import { env } from '@huggingface/transformers';
 import type { Backend } from '../shared/types';
 import type { TtsModelId } from '../shared/tts-models';
-import { KittenTts } from './kitten';
 
 // onnx-community fp16/fp32/q8 ONNX export that kokoro-js targets by default.
 const KOKORO_MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
-const MMS_MODEL_ID = 'Xenova/mms-tts-eng';
 const CHATTERBOX_MODEL_ID = 'onnx-community/chatterbox-ONNX';
 const CHATTERBOX_DEFAULT_VOICE_URL = `https://huggingface.co/${CHATTERBOX_MODEL_ID}/resolve/main/default_voice.wav`;
 const CHATTERBOX_SAMPLE_RATE = 24_000;
@@ -46,11 +43,6 @@ if (env.backends?.onnx?.wasm) {
 
 type GenerateOptions = NonNullable<Parameters<KokoroTTS['generate']>[1]>;
 type KokoroVoice = NonNullable<GenerateOptions['voice']>;
-type RawAudioLike = { audio: Float32Array; sampling_rate: number };
-type TextToSpeechPipeline = (
-  text: string,
-  options?: { speed?: number },
-) => Promise<RawAudioLike>;
 type TensorData = Float32Array | BigInt64Array | Int32Array | number[] | bigint[];
 type TensorLike = { data: TensorData; dims: number[] };
 type TensorConstructor = new (
@@ -92,8 +84,13 @@ type ChatterboxRuntime = {
   env: Parameters<typeof configureTransformersV4>[0];
 };
 type TransformersV4Env = {
+  useBrowserCache?: boolean;
   useWasmCache?: boolean;
   backends?: { onnx?: { logLevel?: string; wasm?: { proxy?: boolean; wasmPaths?: unknown } } };
+};
+type TransformersV4Options = {
+  /** Disable for small v4 adapters that hang after progress reaches 100%. */
+  useBrowserCache?: boolean;
 };
 type ChatterboxDtypeConfig = {
   embed_tokens: 'fp32';
@@ -133,8 +130,6 @@ export interface DownloadProgress {
 
 export class TtsEngine {
   private kokoro: KokoroTTS | null = null;
-  private mms: TextToSpeechPipeline | null = null;
-  private kitten: KittenTts | null = null;
   private chatterbox: ChatterboxModelLike | null = null;
   private chatterboxProcessor: ChatterboxProcessorLike | null = null;
   private chatterboxSpeaker: ChatterboxSpeaker | null = null;
@@ -149,8 +144,6 @@ export class TtsEngine {
   async init(model: TtsModelId, onProgress?: (p: DownloadProgress) => void): Promise<Backend> {
     if (this.ready(model)) return this.backend;
     if (model === 'kokoro') return await this.initKokoro(onProgress);
-    if (model === 'mms-eng') return await this.initMms(onProgress);
-    if (model === 'kitten-nano') return await this.initKitten(onProgress);
     if (model === 'chatterbox-turbo') return await this.initChatterbox(onProgress);
     throw new Error(`Unsupported TTS model: ${model}`);
   }
@@ -163,16 +156,12 @@ export class TtsEngine {
     speed: number,
   ): Promise<SynthResult> {
     if (model === 'kokoro') return await this.synthKokoro(text, voice, speed);
-    if (model === 'mms-eng') return await this.synthMms(text, speed);
-    if (model === 'kitten-nano') return await this.synthKitten(text, voice, speed);
     if (model === 'chatterbox-turbo') return await this.synthChatterbox(text);
     throw new Error(`Unsupported TTS model: ${model}`);
   }
 
   private adapterReady(model: TtsModelId): boolean {
     if (model === 'kokoro') return this.kokoro !== null;
-    if (model === 'mms-eng') return this.mms !== null;
-    if (model === 'kitten-nano') return this.kitten?.ready ?? false;
     if (model === 'chatterbox-turbo') {
       return (
         this.chatterbox !== null &&
@@ -200,35 +189,6 @@ export class TtsEngine {
     return this.backend;
   }
 
-  private async initMms(onProgress?: (p: DownloadProgress) => void): Promise<Backend> {
-    this.mms = await loadMms(onProgress);
-    this.backend = 'wasm';
-    this.activeModel = 'mms-eng';
-    return this.backend;
-  }
-
-  private async initKitten(onProgress?: (p: DownloadProgress) => void): Promise<Backend> {
-    const wantGpu = await webgpuAvailable();
-    try {
-      await this.loadKitten(wantGpu ? 'webgpu' : 'wasm', onProgress);
-    } catch (err) {
-      if (!wantGpu) throw err;
-      console.warn('[tts] KittenTTS WebGPU init failed, falling back to WASM:', err);
-      await this.loadKitten('wasm', onProgress);
-    }
-    this.activeModel = 'kitten-nano';
-    return this.backend;
-  }
-
-  private async loadKitten(
-    device: Backend,
-    onProgress?: (p: DownloadProgress) => void,
-  ): Promise<void> {
-    this.kitten = new KittenTts(configureTransformersV4);
-    await this.kitten.init(device, onProgress);
-    this.backend = device;
-  }
-
   private async initChatterbox(onProgress?: (p: DownloadProgress) => void): Promise<Backend> {
     const wantGpu = await webgpuAvailable();
     try {
@@ -247,7 +207,7 @@ export class TtsEngine {
     onProgress?: (p: DownloadProgress) => void,
   ): Promise<void> {
     const runtime = (await import('transformers-v4')) as unknown as ChatterboxRuntime;
-    configureTransformersV4(runtime.env, device);
+    configureTransformersV4(runtime.env, device, { useBrowserCache: true });
     this.chatterboxProcessor = await runtime.AutoProcessor.from_pretrained(CHATTERBOX_MODEL_ID, {
       progress_callback: progressCallback(onProgress),
     });
@@ -295,27 +255,6 @@ export class TtsEngine {
     return { pcm: audio.audio, sampleRate: audio.sampling_rate };
   }
 
-  private async synthMms(text: string, speed: number): Promise<SynthResult> {
-    if (!this.mms) throw new Error('TTS engine not initialized');
-    const audio = await this.mms(text, { speed });
-    return { pcm: audio.audio, sampleRate: audio.sampling_rate };
-  }
-
-  private async synthKitten(text: string, voice: string, speed: number): Promise<SynthResult> {
-    if (!this.kitten) throw new Error('TTS engine not initialized');
-    try {
-      return await this.kitten.synth(text, voice, speed);
-    } catch (err) {
-      if (this.backend === 'webgpu' && isDeviceLost(err)) {
-        console.warn('[tts] KittenTTS GPUDevice lost — falling back to WASM:', err);
-        await this.loadKitten('wasm');
-        this.activeModel = 'kitten-nano';
-        return await this.kitten!.synth(text, voice, speed);
-      }
-      throw err;
-    }
-  }
-
   private async synthChatterbox(text: string): Promise<SynthResult> {
     if (!this.chatterbox || !this.chatterboxProcessor || !this.chatterboxSpeaker) {
       throw new Error('TTS engine not initialized');
@@ -353,17 +292,14 @@ function loadKokoro(
   });
 }
 
-async function loadMms(onProgress?: (p: DownloadProgress) => void): Promise<TextToSpeechPipeline> {
-  const { env: envV4, pipeline } = await import('transformers-v4');
-  configureTransformersV4(envV4, 'wasm');
-  const tts = await pipeline('text-to-speech', MMS_MODEL_ID, {
-    device: 'cpu',
-    progress_callback: progressCallback(onProgress),
-  });
-  return tts as TextToSpeechPipeline;
-}
-
-function configureTransformersV4(envV4: TransformersV4Env, device: Backend = 'wasm'): void {
+function configureTransformersV4(
+  envV4: TransformersV4Env,
+  device: Backend = 'wasm',
+  options: TransformersV4Options = {},
+): void {
+  if (options.useBrowserCache !== undefined) {
+    envV4.useBrowserCache = options.useBrowserCache;
+  }
   // Transformers.js v4 preloads the ORT .mjs factory into a blob: URL when this
   // stays enabled. MV3 extension pages reject blob: scripts, so keep v4 on the
   // bundled chrome-extension:// runtime files.

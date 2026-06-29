@@ -151,20 +151,14 @@
       on the CPU path.
 - **Fallback / low-end model:** **Piper** (VITS), per-voice ONNX ~20–60MB,
   fast on pure WASM. Candidate only; not currently wired into the extension UI.
-- **Experimental v4 paths:** **MMS English**, **KittenTTS Nano**, and
-  **Chatterbox ONNX** are exposed through the model switcher. They run through
-  the isolated `transformers-v4` alias so Kokoro can remain on its stable v3
-  runtime.
-  - **MMS English** uses the stock v4 text-to-speech pipeline. It is small and
-    useful for v4 runtime testing, but single-voice, 16 kHz, and CC-BY-NC-4.0
-    upstream, so it is not a default replacement.
-  - **KittenTTS Nano** uses a custom StyleTTS2 adapter because stock
-    `@huggingface/transformers@4.2.0` does not support it through
-    `pipeline('text-to-speech', ...)`.
+- **Experimental v4 path:** **Chatterbox ONNX** remains a disabled prototype in
+  the model registry until it passes live MV3 offscreen playback validation. It
+  runs through the isolated `transformers-v4` alias so Kokoro can remain on its
+  stable v3 runtime.
   - **Chatterbox ONNX** uses the browser-demo `ChatterboxModel` API and the
     `onnx-community/chatterbox-ONNX` export with a default prompt voice.
     ResembleAI's Turbo repo remains a future prompt-audio path.
-  Treat all three as experimental until startup latency, memory, download size,
+  Treat it as experimental until startup latency, memory, download size,
   cancellation, and cache behavior are measured in the MV3 offscreen document.
   `pnpm probe:chatterbox` verifies the isolated v4 API surface and estimates the
   Chatterbox footprint without downloading weights.

@@ -76,8 +76,8 @@ Prototype status:
     language model data at about 290.6 MB WebGPU / 337.2 MB WASM.
 
 Implementation status:
-- Audiofi now exposes a playable experimental Chatterbox option backed by
-  `onnx-community/chatterbox-ONNX`.
+- Audiofi keeps Chatterbox as a disabled prototype, not a playable model option.
+  The app only exposes models that have passed live extension playback.
 - The offscreen adapter mirrors the official browser demo: WebGPU uses
   `language_model: q4f16`, WASM uses `language_model: q4`, the other sessions
   use `fp32`, and the default prompt voice is encoded once then reused.
@@ -109,40 +109,26 @@ Conclusion:
 
 ### KittenTTS Nano
 
-Small 2026 candidate now wired as an experimental playable model through a
-custom adapter. The ONNX model card lists StyleTTS2, 15M parameters, 24 kHz,
-eight voices, WebGPU/WASM runtime, and Apache-2.0 licensing.
+Small 2026 candidate, but not currently exposed in Audiofi. The ONNX model card
+lists StyleTTS2, 15M parameters, 24 kHz, eight voices, WebGPU/WASM runtime, and
+Apache-2.0 licensing.
 
 Important boundary: this is not stock-pipeline-compatible in
 `@huggingface/transformers@4.2.0`. A direct
 `pipeline('text-to-speech', 'onnx-community/KittenTTS-Nano-v0.8-ONNX')` probe
 still fails because `model_type: style_text_to_speech_2` is not supported by the
-text-to-audio pipeline. The playable path instead mirrors the official browser
-demo's preprocessing shape: `phonemizer`, Kitten's IPA token table, `voices.npz`
+text-to-audio pipeline. A custom adapter can mirror the official browser demo's
+preprocessing shape: `phonemizer`, Kitten's IPA token table, `voices.npz`
 parsing, and a direct `StyleTextToSpeech2Model.from_pretrained(...)` call.
 
-Current adapter status:
+Rejected adapter status:
 - Model: `onnx-community/KittenTTS-Nano-v0.8-ONNX`
-- Runtime: `transformers-v4` direct `StyleTextToSpeech2Model`; WebGPU with WASM
-  fallback.
+- Runtime tested: `transformers-v4` direct `StyleTextToSpeech2Model`.
 - Extra asset: `voices.npz` (about 3.1 MB) loaded from the model repo and parsed
   in the offscreen document.
-- Default voice mapping: existing Audiofi voice selections fall back to Kitten's
-  Bella voice until the UI grows per-model voice lists.
-
-### MMS English
-
-`Xenova/mms-tts-eng` is the small model that actually instantiates and
-synthesizes through the stock Transformers.js v4 text-to-speech pipeline today.
-It is a VITS model, 16 kHz, single English voice, and significantly less capable
-than Kokoro. The upstream `facebook/mms-tts-eng` license is CC-BY-NC-4.0, so it
-is unsuitable as Audiofi's default, but useful as a small experimental v4 path.
-
-Probe result:
-- `pipeline('text-to-speech', 'Xenova/mms-tts-eng', { device: 'cpu' })` loads.
-- Short synthesis returns `Float32Array` audio at 16 kHz.
-- The browser extension maps v4 `cpu` to the existing WASM fallback concept and
-  bundles the matching v4 ONNX Runtime files under `public/ort-v4`.
+- Live extension result: not reliable. The MV3 offscreen path can reach
+  `Downloading model... 100%` and then hang before model readiness. Do not
+  expose it until session creation is proven end-to-end in the extension.
 
 ### Supertonic
 
@@ -154,15 +140,14 @@ path.
 ## Recommended Roadmap
 
 1. Keep Kokoro as the default production model.
-2. Keep MMS English as an explicit experimental v4 path only.
-3. Add device/memory telemetry around first-load time, chunk synthesis latency,
+2. Add device/memory telemetry around first-load time, chunk synthesis latency,
    and backend fallback rate.
-4. Keep the Chatterbox adapter experimental until it reports model size,
+3. Keep the Chatterbox adapter experimental until it reports model size,
    estimated download, cache status, backend, and expected latency before the
    user starts playback.
-5. Build separate KittenTTS, Supertonic, or Turbo adapters only if we accept
+4. Build separate KittenTTS, Supertonic, or Turbo adapters only if we accept
    model-specific ONNX/processor glue outside stock Transformers.js pipelines.
-6. Revisit the default once Chatterbox-class quality can run within Audiofi's
+5. Revisit the default once Chatterbox-class quality can run within Audiofi's
    latency and memory budget on typical Chrome laptops.
 
 ## Source Notes
@@ -176,7 +161,5 @@ path.
   https://huggingface.co/onnx-community/chatterbox-ONNX
 - KittenTTS Nano ONNX model card:
   https://huggingface.co/onnx-community/KittenTTS-Nano-v0.8-ONNX
-- MMS English model card:
-  https://huggingface.co/Xenova/mms-tts-eng
 - Transformers.js v4 announcement:
   https://huggingface.co/blog/transformersjs-v4
