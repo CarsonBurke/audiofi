@@ -11,9 +11,7 @@ import { looksLikeArticlePage } from './article-page';
 // On article-like pages, spawn the compact in-page player next to the title.
 // Uses a cheap DOM heuristic (no Readability) so the idle cost stays minimal;
 // the full extractor loads only when the user actually presses Play.
-if (window.top === window && looksLikeArticlePage()) {
-  void import('./widget').then((m) => m.mountWidget());
-}
+if (window.top === window) startArticleWidgetProbe();
 
 onMessage('content', async (msg) => {
   if (msg.type !== 'EXTRACT_REQUEST') return;
@@ -60,3 +58,35 @@ onMessage('content', async (msg) => {
     fail('error', err instanceof Error ? err.message : String(err));
   }
 });
+
+function startArticleWidgetProbe(): void {
+  if (tryMountArticleWidget()) return;
+
+  const deadline = Date.now() + 15_000;
+  let timer: number | null = null;
+  const observer = new MutationObserver(scheduleCheck);
+
+  const stop = (): void => {
+    if (timer !== null) window.clearTimeout(timer);
+    observer.disconnect();
+    timer = null;
+  };
+
+  function scheduleCheck(): void {
+    if (timer !== null) return;
+    timer = window.setTimeout(() => {
+      timer = null;
+      if (tryMountArticleWidget() || Date.now() >= deadline) stop();
+    }, 250);
+  }
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  window.addEventListener('load', scheduleCheck, { once: true });
+  scheduleCheck();
+}
+
+function tryMountArticleWidget(): boolean {
+  if (!looksLikeArticlePage()) return false;
+  void import('./widget').then((m) => m.mountWidget());
+  return true;
+}

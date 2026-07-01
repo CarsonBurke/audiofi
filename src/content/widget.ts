@@ -16,6 +16,7 @@ import {
   resolvePlayableTtsModel,
   type TtsModelId,
 } from '../shared/tts-models';
+import { findArticleTitle } from './article-page';
 import { Select, SELECT_STYLE } from '../ui/select';
 import { Slider, SLIDER_STYLE } from '../ui/slider';
 import {
@@ -46,7 +47,7 @@ let mounted = false;
 /** Inject the widget once, anchored after the article's main title. */
 export function mountWidget(): void {
   if (mounted) return;
-  const anchor = document.querySelector<HTMLElement>('article h1, main h1, h1');
+  const anchor = findArticleTitle();
   if (!anchor) return;
   mounted = true;
   new Widget(anchor);
