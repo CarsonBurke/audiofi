@@ -58,11 +58,11 @@ Why not switch immediately:
   prompt-audio capture flow or bundled prompt voice.
 
 Candidate role:
-- Optional "expressive/local" model after a prototype proves acceptable startup,
-  memory, latency, and audio quality.
+- Optional "expressive/local" model for users who accept a much larger first
+  download than Kokoro.
 
 Prototype status:
-- `transformers-v4` is installed as a dev-only package alias pointing at
+- `transformers-v4` is installed as an isolated package alias pointing at
   `@huggingface/transformers@4.2.0`.
 - `pnpm probe:chatterbox` verifies that the alias exports `ChatterboxModel`,
   `AutoProcessor`, and `Tensor`, and checks whether the Turbo export has a
@@ -76,8 +76,8 @@ Prototype status:
     language model data at about 290.6 MB WebGPU / 337.2 MB WASM.
 
 Implementation status:
-- Audiofi keeps Chatterbox as a disabled prototype, not a playable model option.
-  The app only exposes models that have passed live extension playback.
+- Audiofi exposes Chatterbox as an opt-in playable model through the isolated
+  Transformers.js v4 adapter.
 - The offscreen adapter mirrors the official browser demo: WebGPU uses
   `language_model: q4f16`, WASM uses `language_model: q4`, the other sessions
   use `fp32`, and the default prompt voice is encoded once then reused.
@@ -85,8 +85,8 @@ Implementation status:
   speaker selection UI exists.
 
 This footprint is too large to silently download as the default article reader
-voice. Keep Kokoro as default until Chatterbox has first-load UX, cancellation,
-cache reporting, and real low-end-device measurements.
+voice. Keep Kokoro as default; Chatterbox remains an explicit opt-in with a
+large-download warning.
 
 ### Transformers.js v4
 

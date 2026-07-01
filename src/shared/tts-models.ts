@@ -21,12 +21,11 @@ export const TTS_MODELS: TtsModelOption[] = [
   {
     id: 'chatterbox-turbo',
     label: 'Chatterbox ONNX',
-    playable: false,
-    description: 'Large expressive local prototype using the official browser-demo adapter.',
-    prototypeNote:
-      'Uses onnx-community/chatterbox-ONNX with its default prompt voice, but first-load UX and live offscreen playback are not product-ready yet.',
+    playable: true,
+    description:
+      'Large expressive local voice using Transformers.js v4 and onnx-community/chatterbox-ONNX.',
     warningNote:
-      'Chatterbox is disabled until startup latency, memory, download size, cancellation, and cache behavior are validated in MV3.',
+      'Chatterbox downloads about 1.5 GB on first use and ignores the Kokoro voice selector until prompt-audio capture is added.',
   },
 ];
 

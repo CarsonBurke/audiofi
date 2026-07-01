@@ -151,15 +151,13 @@
       on the CPU path.
 - **Fallback / low-end model:** **Piper** (VITS), per-voice ONNX ~20–60MB,
   fast on pure WASM. Candidate only; not currently wired into the extension UI.
-- **Experimental v4 path:** **Chatterbox ONNX** remains a disabled prototype in
-  the model registry until it passes live MV3 offscreen playback validation. It
-  runs through the isolated `transformers-v4` alias so Kokoro can remain on its
-  stable v3 runtime.
+- **Expressive v4 path:** **Chatterbox ONNX** is exposed as an optional model.
+  It runs through the isolated `transformers-v4` alias so Kokoro can remain on
+  its stable v3 runtime.
   - **Chatterbox ONNX** uses the browser-demo `ChatterboxModel` API and the
     `onnx-community/chatterbox-ONNX` export with a default prompt voice.
     ResembleAI's Turbo repo remains a future prompt-audio path.
-  Treat it as experimental until startup latency, memory, download size,
-  cancellation, and cache behavior are measured in the MV3 offscreen document.
+  Treat it as a heavy opt-in model: first use downloads about 1.5 GB, and
   `pnpm probe:chatterbox` verifies the isolated v4 API surface and estimates the
   Chatterbox footprint without downloading weights.
 - **Backend selection at runtime:**
